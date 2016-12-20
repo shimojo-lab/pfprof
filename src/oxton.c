@@ -166,6 +166,7 @@ int MPI_Comm_free(MPI_Comm *comm)
 
     return remove_event_handlers(comm_idx);
 }
+
 int MPI_Finalize()
 {
     int i;
@@ -178,13 +179,14 @@ int MPI_Finalize()
         remove_event_handlers(i);
     }
 
+    /* Free event handle array */
     for(i = 0; i < NUM_REQ_EVENT_NAMES; i++) {
         free(event_table[i].handles);
     }
 
     free(comms);
 
-    /* events should be empty at this point, but just in case... */
+    /* `events` should be empty at this point, but just in case... */
     HASH_ITER(hh, events, ev, tmp_ev) {
         HASH_DEL(events, ev);
         free(ev);
@@ -192,6 +194,7 @@ int MPI_Finalize()
 
     return PMPI_Finalize();
 }
+
 /* Support functions */
 int register_event_handlers(MPI_Comm comm, peruse_comm_callback_f *callback)
 {

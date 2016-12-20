@@ -8,7 +8,7 @@
 static OTF2_TimeStamp get_time()
 {
     double t = MPI_Wtime() * 1e9;
-    return ( uint64_t )t;
+    return (uint64_t)t;
 }
 
 static OTF2_FlushType pre_flush(void *userData, OTF2_FileType fileType,
@@ -35,6 +35,10 @@ static OTF2_Archive *archive;
 static OTF2_EvtWriter* evt_writer;
 static uint64_t epoch_start;
 static uint64_t epoch_end;
+static uint64_t global_epoch_start;
+static uint64_t global_epoch_end;
+
+static void write_global_defs();
 
 void init_writer()
 {
@@ -47,14 +51,20 @@ void init_writer()
     OTF2_MPI_Archive_SetCollectiveCallbacks(archive,
             MPI_COMM_WORLD, MPI_COMM_NULL);
 
+    OTF2_Archive_SetDescription(archive, "MPI trace log captured with Oxton");
+    OTF2_Archive_SetCreator(archive, "Oxton v0.0.1");
+
     /* Open event file and get writer */
     OTF2_Archive_OpenEvtFiles(archive);
     evt_writer = OTF2_Archive_GetEvtWriter(archive, my_rank);
-    get_time();
+
+    epoch_start = get_time();
 }
 
 void close_writer()
 {
+    epoch_end = get_time();
+
     OTF2_Archive_CloseEvtWriter(archive, evt_writer);
     OTF2_Archive_CloseEvtFiles(archive);
 
@@ -67,80 +77,83 @@ void close_writer()
             MPI_MAX, 0, MPI_COMM_WORLD);
 
     if (my_rank == 0) {
-        OTF2_GlobalDefWriter* global_def_writer = OTF2_Archive_GetGlobalDefWriter(archive);
-
-        OTF2_GlobalDefWriter_WriteClockProperties(global_def_writer,
-                                                  1000000000,
-                                                  global_epoch_start,
-                                                  global_epoch_end - global_epoch_start + 1 );
-
-        OTF2_GlobalDefWriter_WriteString(global_def_writer, 0, "" );
-        OTF2_GlobalDefWriter_WriteString(global_def_writer, 1, "Master Thread" );
-        OTF2_GlobalDefWriter_WriteString(global_def_writer, 4, "barrier" );
-        OTF2_GlobalDefWriter_WriteString(global_def_writer, 5, "MyHost" );
-        OTF2_GlobalDefWriter_WriteString(global_def_writer, 6, "node" );
-        OTF2_GlobalDefWriter_WriteString(global_def_writer, 7, "MPI" );
-        OTF2_GlobalDefWriter_WriteString(global_def_writer, 8, "MPI_COMM_WORLD" );
-        OTF2_GlobalDefWriter_WriteSystemTreeNode( global_def_writer,
-                                                  0 /* id */,
-                                                  5 /* name */,
-                                                  6 /* class */,
-                                                  OTF2_UNDEFINED_SYSTEM_TREE_NODE /* parent */ );
-
-        for ( int r = 0; r < num_procs; r++ ) {
-            char process_name[ 32 ];
-            sprintf( process_name, "MPI Rank %d", r );
-            OTF2_GlobalDefWriter_WriteString( global_def_writer,
-                                              9 + r,
-                                              process_name );
-            OTF2_GlobalDefWriter_WriteLocationGroup(global_def_writer,
-                                                    r /* id */,
-                                                    9 + r /* name */,
-                                                    OTF2_LOCATION_GROUP_TYPE_PROCESS,
-                                                    0 /* system tree */ );
-            OTF2_GlobalDefWriter_WriteLocation(global_def_writer,
-                                               r /* id */,
-                                               1 /* name */,
-                                               OTF2_LOCATION_TYPE_CPU_THREAD,
-                                               4 /* # events */,
-                                               r /* location group */ );
-
-            uint64_t *comm_locations = (uint64_t *)calloc(num_procs, sizeof(uint64_t));
-            comm_locations[r] = r;
-        }
-
-        OTF2_GlobalDefWriter_WriteGroup( global_def_writer,
-                                         0 /* id */,
-                                         7 /* name */,
-                                         OTF2_GROUP_TYPE_COMM_LOCATIONS,
-                                         OTF2_PARADIGM_MPI,
-                                         OTF2_GROUP_FLAG_NONE,
-                                         num_procs,
-                                         comm_locations );
-        OTF2_GlobalDefWriter_WriteGroup( global_def_writer,
-                                         1 /* id */,
-                                         0 /* name */,
-                                         OTF2_GROUP_TYPE_COMM_GROUP,
-                                         OTF2_PARADIGM_MPI,
-                                         OTF2_GROUP_FLAG_NONE,
-                                         num_procs,
-                                         comm_locations );
-        OTF2_GlobalDefWriter_WriteComm( global_def_writer,
-                                        0 /* id */,
-                                        8 /* name */,
-                                        1 /* group */,
-                                        OTF2_UNDEFINED_COMM /* parent */ );
-
-        free(comm_locations);
-
-        OTF2_Archive_CloseGlobalDefWriter(archive, global_def_writer);
+        write_global_defs();
     }
 
-    /* Create empty local def to supress warnings */
-    OTF2_DefWriter *local_def_writer = OTF2_Archive_GetDefWriter(archive, my_rank);
+    /* Create empty local defs to supress warnings */
+    OTF2_DefWriter *local_def_writer =
+        OTF2_Archive_GetDefWriter(archive, my_rank);
     OTF2_Archive_CloseDefWriter(archive, local_def_writer);
 
     OTF2_Archive_Close(archive);
+}
+
+enum {
+    G_STR_EMPTY,
+    G_STR_MASTER_THREAD,
+    G_STR_MPI,
+    G_STR_MPI_COMM_WORLD,
+    G_STR_PROCESS,
+};
+
+void write_global_defs()
+{
+    OTF2_GlobalDefWriter *writer = NULL;
+    uint64_t *comm_locations = NULL;
+
+    writer = OTF2_Archive_GetGlobalDefWriter(archive);
+
+    OTF2_GlobalDefWriter_WriteClockProperties(writer,
+        1000000000, global_epoch_start, global_epoch_end - global_epoch_start + 1 );
+
+    OTF2_GlobalDefWriter_WriteString(writer, G_STR_EMPTY, "");
+    OTF2_GlobalDefWriter_WriteString(writer, G_STR_MASTER_THREAD, "Master Thread");
+    OTF2_GlobalDefWriter_WriteString(writer, G_STR_MPI, "MPI");
+    OTF2_GlobalDefWriter_WriteString(writer, G_STR_MPI_COMM_WORLD, "MPI_COMM_WORLD");
+
+    for (int rank = 0; rank < num_procs; rank++) {
+        char process_name[32];
+
+        sprintf(process_name, "MPI Rank %d", rank);
+        OTF2_GlobalDefWriter_WriteString(writer, G_STR_PROCESS + rank,
+                process_name);
+
+        /* Process */
+        OTF2_GlobalDefWriter_WriteLocationGroup(writer,
+                rank /* id == rank */, G_STR_PROCESS + rank /* name */,
+                OTF2_LOCATION_GROUP_TYPE_PROCESS,
+                OTF2_UNDEFINED_SYSTEM_TREE_NODE);
+
+        /* Thread */
+        OTF2_GlobalDefWriter_WriteLocation(
+                writer, rank /* id */, 1 /* name */,
+                OTF2_LOCATION_TYPE_CPU_THREAD, 100 /* number of events */,
+                rank /* proces */);
+    }
+
+    comm_locations = (uint64_t *)calloc(num_procs, sizeof(uint64_t));
+    for (int rank = 0; rank < num_procs; rank++) {
+        comm_locations[rank] = rank;
+    }
+
+    /* MPI Group */
+    OTF2_GlobalDefWriter_WriteGroup(writer,
+        0 /* id */, G_STR_MPI /* name */, OTF2_GROUP_TYPE_COMM_LOCATIONS,
+        OTF2_PARADIGM_MPI, OTF2_GROUP_FLAG_NONE, num_procs, comm_locations);
+
+    /* MPI_COMM_WORLD Group */
+    OTF2_GlobalDefWriter_WriteGroup(writer,
+        1 /* id */, G_STR_EMPTY /* name */, OTF2_GROUP_TYPE_COMM_GROUP,
+        OTF2_PARADIGM_MPI, OTF2_GROUP_FLAG_NONE, num_procs, comm_locations);
+
+    /* MPI_COMM_WORLD */
+    OTF2_GlobalDefWriter_WriteComm(writer,
+        0 /* id */, G_STR_MPI_COMM_WORLD /* name */, 1 /* group */,
+        OTF2_UNDEFINED_COMM);
+
+    free(comm_locations);
+
+    OTF2_Archive_CloseGlobalDefWriter(archive, writer);
 }
 
 void write_xfer_event(xfer_event_t *ev)
