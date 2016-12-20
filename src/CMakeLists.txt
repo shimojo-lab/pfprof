@@ -1,5 +1,6 @@
 # liboxton
-add_library(oxton oxton.c)
+add_library(oxton oxton.c writer.c)
+target_link_libraries(oxton otf2)
 
 # oxton-test
 add_executable (oxton-test oxton_test.c)

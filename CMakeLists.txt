@@ -11,5 +11,6 @@ project(oxton C)
 
 # Include paths and source code directories
 find_package(MPI REQUIRED)
-include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+include_directories(SYSTEM ${MPI_INCLUDE_PATH} /opt/otf2/include)
+link_directories(/opt/otf2/lib)
 add_subdirectory(src)

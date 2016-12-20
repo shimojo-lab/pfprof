@@ -4,6 +4,7 @@
 #include <peruse.h>
 
 #include "uthash.h"
+#include "oxton.h"
 
 #define NUM_REQ_EVENT_NAMES (2)
 
@@ -19,24 +20,16 @@ typedef struct
     peruse_event_h *handles;
 } event_handle_table_t;
 
-typedef struct {
-    MPI_Aint unique_id;
-    int src;
-    int dst;
-    double start_time;
-    double end_time;
-    int size;
-    UT_hash_handle hh;
-} xfer_event_t;
+int num_procs, my_rank;
 
 static int register_event_handlers(MPI_Comm comm,
         peruse_comm_callback_f *callback);
 static int remove_event_handlers(int comm_idx);
 
-int np, my_rank, num_comms = 0;
-MPI_Comm *comms = NULL;
-event_handle_table_t event_table[NUM_REQ_EVENT_NAMES];
-xfer_event_t *events = NULL;
+static int num_comms = 0;
+static MPI_Comm *comms = NULL;
+static event_handle_table_t event_table[NUM_REQ_EVENT_NAMES];
+static xfer_event_t *events = NULL;
 
 /* Callback for collecting statistics */
 int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
@@ -69,13 +62,12 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
             HASH_FIND(hh, events, &tmp_ev.unique_id, sizeof(unique_id), ev);
 
             if (ev == NULL) {
-                printf("Unexpected event in callback\n");
                 return MPI_ERR_INTERN;
             }
 
             ev->end_time = MPI_Wtime();
-            printf("xfer from %d to %d in %f[s]\n", ev->src, ev->dst,
-                    ev->end_time - ev->start_time);
+
+            write_xfer_event(ev);
 
             HASH_DEL(events, ev);
             free(ev);
@@ -96,8 +88,10 @@ int MPI_Init(int *argc, char ***argv)
     peruse_event_h eh;
 
     PMPI_Init(argc, argv);
-    PMPI_Comm_size(MPI_COMM_WORLD, &np);
+    PMPI_Comm_size(MPI_COMM_WORLD, &num_procs);
     PMPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+
+    init_writer();
 
     /* Initialize PERUSE */
     ret = PERUSE_Init();
@@ -176,6 +170,8 @@ int MPI_Finalize()
 {
     int i;
     xfer_event_t *ev, *tmp_ev;
+
+    close_writer();
 
     /* Deactivate event handles and free them for all comms */
     for(i = 0; i < num_comms; i++) {
