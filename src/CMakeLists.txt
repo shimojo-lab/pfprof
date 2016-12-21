@@ -1,5 +1,5 @@
 # liboxton
-add_library(oxton oxton.c writer.c)
+add_library(oxton oxton.c otf2_writer.c otf2_gdef_writer.c)
 target_link_libraries(oxton otf2)
 
 # oxton-test

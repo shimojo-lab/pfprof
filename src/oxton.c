@@ -5,6 +5,7 @@
 
 #include "uthash.h"
 #include "oxton.h"
+#include "otf2_writer.h"
 
 #define NUM_REQ_EVENT_NAMES (2)
 
@@ -91,7 +92,7 @@ int MPI_Init(int *argc, char ***argv)
     PMPI_Comm_size(MPI_COMM_WORLD, &num_procs);
     PMPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
-    init_writer();
+    open_otf2_writer();
 
     /* Initialize PERUSE */
     ret = PERUSE_Init();
@@ -172,7 +173,7 @@ int MPI_Finalize()
     int i;
     xfer_event_t *ev, *tmp_ev;
 
-    close_writer();
+    close_otf2_writer();
 
     /* Deactivate event handles and free them for all comms */
     for(i = 0; i < num_comms; i++) {

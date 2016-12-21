@@ -1,3 +1,6 @@
+#ifndef __OXTON_H__
+#define __OXTON_H__
+
 #include <mpi.h>
 
 #include "uthash.h"
@@ -12,8 +15,6 @@ typedef struct {
     UT_hash_handle hh;
 } xfer_event_t;
 
-void write_xfer_event(xfer_event_t *ev);
-void init_writer();
-void close_writer();
-
 extern int num_procs, my_rank;
+
+#endif
