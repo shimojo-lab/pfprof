@@ -91,13 +91,18 @@ int close_otf2_writer()
     return EXIT_SUCCESS;
 }
 
-int write_xfer_event(struct xfer_event *ev)
+int write_xfer_begin_event(uint32_t dst, uint32_t tag, uint32_t len,
+                            uint64_t req_id)
 {
-    printf("xfer from %d to %d in %f[s]\n", ev->src, ev->dst,
-            ev->end_time - ev->start_time);
-
-    OTF2_EvtWriter_MpiSend(evt_writer, NULL, get_time(), ev->dst, 0, 0, ev->size);
+    OTF2_EvtWriter_MpiIsend(evt_writer, NULL, get_time(), dst, 0, tag, len,
+                                req_id);
 
     return EXIT_SUCCESS;
 }
 
+int write_xfer_end_event(uint64_t req_id)
+{
+    OTF2_EvtWriter_MpiIsendComplete(evt_writer, NULL, get_time(), req_id);
+
+    return EXIT_SUCCESS;
+}

@@ -15,11 +15,11 @@ char *req_events[NUM_REQ_EVENT_NAMES] = {
     "PERUSE_COMM_REQ_XFER_END",
 };
 
-typedef struct
+struct event_handle_table
 {
     int descriptor;
     peruse_event_h *handles;
-} event_handle_table_t;
+};
 
 int num_procs, my_rank;
 
@@ -29,49 +29,31 @@ static int remove_event_handlers(int comm_idx);
 
 static int num_comms = 0;
 static MPI_Comm *comms = NULL;
-static event_handle_table_t event_table[NUM_REQ_EVENT_NAMES];
-static struct xfer_event *events = NULL;
+static struct event_handle_table event_table[NUM_REQ_EVENT_NAMES];
 
 /* Callback for collecting statistics */
 int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
         peruse_comm_spec_t *spec, void *param)
 {
-    struct xfer_event tmp_ev, *ev = NULL;
-    int type, size;
+    int ev_type, sz, len;
+    uint64_t req_id = (uint64_t)unique_id;
 
     /* Ignore all recv events and send events to myself */
     if(spec->peer == my_rank || spec->operation == PERUSE_RECV) {
         return MPI_SUCCESS;
     }
 
-    PERUSE_Event_get(event_handle, &type);
-    switch(type) {
+    PERUSE_Event_get(event_handle, &ev_type);
+    switch(ev_type) {
         case PERUSE_COMM_REQ_XFER_BEGIN:
-            MPI_Type_size(spec->datatype, &size);
-
-            ev = (struct xfer_event *)malloc(sizeof(*ev));
-            ev->unique_id = unique_id;
-            ev->src = my_rank;
-            ev->dst = spec->peer;
-            ev->start_time = MPI_Wtime();
-            ev->size = spec->count * size;
-            HASH_ADD(hh, events, unique_id, sizeof(unique_id), ev);
+            MPI_Type_size(spec->datatype, &sz);
+            len = spec->count * sz;
+            printf("%d\n", spec->tag);
+            write_xfer_begin_event(spec->peer, spec->tag, len, req_id);
             break;
 
         case PERUSE_COMM_REQ_XFER_END:
-            tmp_ev.unique_id = unique_id;
-            HASH_FIND(hh, events, &tmp_ev.unique_id, sizeof(unique_id), ev);
-
-            if (ev == NULL) {
-                return MPI_ERR_INTERN;
-            }
-
-            ev->end_time = MPI_Wtime();
-
-            write_xfer_event(ev);
-
-            HASH_DEL(events, ev);
-            free(ev);
+            write_xfer_end_event(req_id);
             break;
 
         default:
@@ -171,7 +153,6 @@ int MPI_Comm_free(MPI_Comm *comm)
 int MPI_Finalize()
 {
     int i;
-    struct xfer_event *ev, *tmp_ev;
 
     close_otf2_writer();
 
@@ -186,12 +167,6 @@ int MPI_Finalize()
     }
 
     free(comms);
-
-    /* `events` should be empty at this point, but just in case... */
-    HASH_ITER(hh, events, ev, tmp_ev) {
-        HASH_DEL(events, ev);
-        free(ev);
-    }
 
     return PMPI_Finalize();
 }
