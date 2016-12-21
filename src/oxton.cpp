@@ -13,7 +13,7 @@ extern "C" {
 #define NUM_REQ_EVENT_NAMES (2)
 
 /* Events for the occurrence of which the profiler will be notified */
-const char *req_events[NUM_REQ_EVENT_NAMES] = {
+static const char *req_events[NUM_REQ_EVENT_NAMES] = {
     "PERUSE_COMM_REQ_XFER_BEGIN",
     "PERUSE_COMM_REQ_XFER_END",
 };
@@ -24,14 +24,16 @@ static int register_event_handlers(MPI_Comm comm,
         peruse_comm_callback_f *callback);
 static int remove_event_handlers(MPI_Comm comm);
 
-std::vector<MPI_Comm> comms;
 typedef int peruse_event_desc;
-typedef std::unordered_map<MPI_Comm, peruse_event_h>  hoge;
+typedef std::unordered_map<MPI_Comm, peruse_event_h> hoge;
 typedef std::unordered_map<peruse_event_desc, hoge> eh_table_t;
+
+static std::vector<MPI_Comm> comms;
+static std::unordered_map<MPI_Aint, uint64_t> req_id_table;
+static int max_req_id;
 
 eh_table_t eh_table;
 
-/* Callback for collecting statistics */
 int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
         peruse_comm_spec_t *spec, void *param)
 {
@@ -48,11 +50,12 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
         case PERUSE_COMM_REQ_XFER_BEGIN:
             MPI_Type_size(spec->datatype, &sz);
             len = spec->count * sz;
-            write_xfer_begin_event(spec->peer, spec->tag, len, req_id);
+            req_id_table[unique_id] = max_req_id++;
+            write_xfer_begin_event(spec->peer, spec->tag, len, max_req_id);
             break;
 
         case PERUSE_COMM_REQ_XFER_END:
-            write_xfer_end_event(req_id);
+            write_xfer_end_event(req_id_table[unique_id]);
             break;
 
         default:
@@ -63,7 +66,6 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
     return MPI_SUCCESS;
 }
 
-/* Profiler functions */
 extern "C" int MPI_Init(int *argc, char ***argv)
 {
     int ret;
