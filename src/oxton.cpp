@@ -1,4 +1,6 @@
 #include <iostream>
+#include <vector>
+#include <unordered_map>
 
 #include <mpi.h>
 extern "C" {
@@ -16,21 +18,18 @@ const char *req_events[NUM_REQ_EVENT_NAMES] = {
     "PERUSE_COMM_REQ_XFER_END",
 };
 
-struct event_handle_table
-{
-    int descriptor;
-    peruse_event_h *handles;
-};
-
 int num_procs, my_rank;
 
 static int register_event_handlers(MPI_Comm comm,
         peruse_comm_callback_f *callback);
-static int remove_event_handlers(int comm_idx);
+static int remove_event_handlers(MPI_Comm comm);
 
-static int num_comms = 0;
-static MPI_Comm *comms = NULL;
-static struct event_handle_table event_table[NUM_REQ_EVENT_NAMES];
+std::vector<MPI_Comm> comms;
+typedef int peruse_event_desc;
+typedef std::unordered_map<MPI_Comm, peruse_event_h>  hoge;
+typedef std::unordered_map<peruse_event_desc, hoge> eh_table_t;
+
+eh_table_t eh_table;
 
 /* Callback for collecting statistics */
 int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
@@ -67,8 +66,7 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
 /* Profiler functions */
 extern "C" int MPI_Init(int *argc, char ***argv)
 {
-    int i, ret, descriptor;
-    peruse_event_h eh;
+    int ret;
 
     PMPI_Init(argc, argv);
     PMPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -84,12 +82,16 @@ extern "C" int MPI_Init(int *argc, char ***argv)
     }
 
     /* Query PERUSE to see if the events of interest are supported */
-    for(i = 0; i < NUM_REQ_EVENT_NAMES; i++) {
-        ret = PERUSE_Query_event(req_events[i], &event_table[i].descriptor);
+    for(int i = 0; i < NUM_REQ_EVENT_NAMES; i++) {
+        peruse_event_desc desc;
+
+        ret = PERUSE_Query_event(req_events[i], &desc);
         if(ret != PERUSE_SUCCESS) {
             printf("Event %s not supported\n", req_events[i]);
             return MPI_ERR_INTERN;
         }
+
+        eh_table[desc] = std::unordered_map<MPI_Comm, peruse_event_h>();
     }
 
     return register_event_handlers(MPI_COMM_WORLD, peruse_event_handler);
@@ -133,7 +135,7 @@ extern "C" int MPI_Comm_split(MPI_Comm comm, int color, int key, MPI_Comm *newco
 
 extern "C" int MPI_Comm_free(MPI_Comm *comm)
 {
-    int i, comm_idx, ret;
+    int comm_idx, ret;
     MPI_Comm cm = *comm;
 
     ret = PMPI_Comm_free(comm);
@@ -141,65 +143,44 @@ extern "C" int MPI_Comm_free(MPI_Comm *comm)
         return ret;
     }
 
-    for(i = 0; i < num_comms; i++) {
-        if(cm == comms[i]) {
-            comm_idx = i;
-        }
-    }
-
-    return remove_event_handlers(comm_idx);
+    return remove_event_handlers(*comm);
 }
 
 extern "C" int MPI_Finalize()
 {
-    int i;
-
     close_otf2_writer();
 
     /* Deactivate event handles and free them for all comms */
-    for(i = 0; i < num_comms; i++) {
-        remove_event_handlers(i);
+    for(int i = 0; i < comms.size(); i++) {
+        remove_event_handlers(comms[i]);
     }
-
-    /* Free event handle array */
-    for(i = 0; i < NUM_REQ_EVENT_NAMES; i++) {
-        free(event_table[i].handles);
-    }
-
-    free(comms);
 
     return PMPI_Finalize();
 }
 
 int register_event_handlers(MPI_Comm comm, peruse_comm_callback_f *callback)
 {
-    int i;
-    peruse_event_h eh;
-
     /* Initialize event handles with comm and activate them */
-    num_comms++;
-    comms = (MPI_Comm *)realloc(comms, num_comms * sizeof(MPI_Comm));
-    comms[num_comms - 1] = comm;
+    comms.push_back(comm);
 
-    for(i = 0; i < NUM_REQ_EVENT_NAMES; i++) {
-        PERUSE_Event_comm_register(event_table[i].descriptor, comm, callback,
-                NULL, &eh);
-        event_table[i].handles = (peruse_event_h *)realloc(
-                event_table[i].handles, num_comms * sizeof(peruse_event_h));
-        event_table[i].handles[num_comms - 1] = eh;
+    eh_table_t::iterator it;
+    for (it = eh_table.begin(); it != eh_table.end(); ++it) {
+        peruse_event_h eh;
+
+        PERUSE_Event_comm_register(it->first, comm, callback, NULL, &eh);
+        it->second[comm] = eh;
         PERUSE_Event_activate(eh);
     }
 
     return MPI_SUCCESS;
 }
 
-int remove_event_handlers(int comm_idx)
+int remove_event_handlers(MPI_Comm comm)
 {
-    int i;
-
-    for(i = 0; i < NUM_REQ_EVENT_NAMES; i++) {
-        PERUSE_Event_deactivate(event_table[i].handles[comm_idx]);
-        PERUSE_Event_release(&event_table[i].handles[comm_idx]);
+    eh_table_t::iterator it;
+    for (it = eh_table.begin(); it != eh_table.end(); ++it) {
+        PERUSE_Event_deactivate(it->second[comm]);
+        PERUSE_Event_release(&it->second[comm]);
     }
 
     return MPI_SUCCESS;
