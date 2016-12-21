@@ -43,8 +43,8 @@ static int write_location_global_defs(OTF2_GlobalDefWriter *w)
 
 static int write_communicator_global_defs(OTF2_GlobalDefWriter *w)
 {
-    uint64_t *comm_locations = NULL;
-    comm_locations = (uint64_t *)calloc(num_procs, sizeof(uint64_t));
+    uint64_t *comm_locations;
+    comm_locations = (uint64_t *)calloc(num_procs, sizeof(*comm_locations));
     for (int rank = 0; rank < num_procs; rank++) {
         comm_locations[rank] = rank;
     }
@@ -72,7 +72,7 @@ static int write_communicator_global_defs(OTF2_GlobalDefWriter *w)
 
 int write_global_defs()
 {
-    OTF2_GlobalDefWriter *writer = NULL;
+    OTF2_GlobalDefWriter *writer;
 
     writer = OTF2_Archive_GetGlobalDefWriter(archive);
 

@@ -1,12 +1,12 @@
 #ifndef __OTF2_WRITER_H__
 #define __OTF2_WRITER_H__
 
+#include <mpi.h>
 #include <otf2/otf2.h>
 
 #include "oxton.h"
 
 extern OTF2_Archive *archive;
-extern OTF2_EvtWriter* evt_writer;
 extern uint64_t epoch_start;
 extern uint64_t epoch_end;
 extern uint64_t global_epoch_start;
@@ -18,9 +18,6 @@ int close_otf2_writer();
 int write_xfer_begin_event(uint32_t dst, uint32_t tag, uint32_t len,
                             uint64_t req_id);
 int write_xfer_end_event(uint64_t req_id);
-
-int write_group_local_def();
-int write_comm_local_def();
 
 int write_global_defs();
 

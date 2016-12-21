@@ -48,7 +48,6 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
         case PERUSE_COMM_REQ_XFER_BEGIN:
             MPI_Type_size(spec->datatype, &sz);
             len = spec->count * sz;
-            printf("%d\n", spec->tag);
             write_xfer_begin_event(spec->peer, spec->tag, len, req_id);
             break;
 

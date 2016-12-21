@@ -6,6 +6,12 @@
 #include "oxton.h"
 #include "otf2_writer.h"
 
+OTF2_Archive *archive;
+uint64_t epoch_start;
+uint64_t epoch_end;
+uint64_t global_epoch_start;
+uint64_t global_epoch_end;
+
 static OTF2_TimeStamp get_time()
 {
     double t = MPI_Wtime() * 1e9;
@@ -32,12 +38,8 @@ static OTF2_FlushCallbacks flush_callbacks = {
     .otf2_post_flush = post_flush
 };
 
-OTF2_Archive *archive;
-OTF2_EvtWriter* evt_writer;
-uint64_t epoch_start;
-uint64_t epoch_end;
-uint64_t global_epoch_start;
-uint64_t global_epoch_end;
+static OTF2_EvtWriter* evt_writer;
+static OTF2_DefWriter *def_writer;
 
 int open_otf2_writer()
 {
@@ -57,6 +59,8 @@ int open_otf2_writer()
     OTF2_Archive_OpenEvtFiles(archive);
     evt_writer = OTF2_Archive_GetEvtWriter(archive, my_rank);
 
+    def_writer = OTF2_Archive_GetDefWriter(archive, my_rank);
+
     epoch_start = get_time();
 
     return EXIT_SUCCESS;
@@ -65,6 +69,8 @@ int open_otf2_writer()
 int close_otf2_writer()
 {
     epoch_end = get_time();
+
+    OTF2_Archive_CloseDefWriter(archive, def_writer);
 
     OTF2_Archive_CloseEvtWriter(archive, evt_writer);
     OTF2_Archive_CloseEvtFiles(archive);
@@ -80,11 +86,6 @@ int close_otf2_writer()
     if (my_rank == 0) {
         write_global_defs();
     }
-
-    /* Create empty local defs to supress warnings */
-    OTF2_DefWriter *local_def_writer =
-        OTF2_Archive_GetDefWriter(archive, my_rank);
-    OTF2_Archive_CloseDefWriter(archive, local_def_writer);
 
     OTF2_Archive_Close(archive);
 
