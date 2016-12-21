@@ -7,7 +7,7 @@ set(cmake_c_flags_debug "-g")
 set(cmake_build_type Release)
 
 # Project
-project(oxton C)
+project(oxton C CXX)
 
 # Include paths and source code directories
 find_package(MPI REQUIRED)

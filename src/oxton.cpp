@@ -1,16 +1,17 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <mpi.h>
-#include <peruse.h>
+#include <iostream>
 
-#include "uthash.h"
+#include <mpi.h>
+extern "C" {
+#include <peruse.h>
+};
+
 #include "oxton.h"
 #include "otf2_writer.h"
 
 #define NUM_REQ_EVENT_NAMES (2)
 
 /* Events for the occurrence of which the profiler will be notified */
-char *req_events[NUM_REQ_EVENT_NAMES] = {
+const char *req_events[NUM_REQ_EVENT_NAMES] = {
     "PERUSE_COMM_REQ_XFER_BEGIN",
     "PERUSE_COMM_REQ_XFER_END",
 };
@@ -56,7 +57,7 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
             break;
 
         default:
-            printf("Unexpected event in callback\n");
+            std::cout << "Unexpected event in callback\n" << std::endl;
             return MPI_ERR_INTERN;
     }
 
@@ -64,7 +65,7 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
 }
 
 /* Profiler functions */
-int MPI_Init(int *argc, char ***argv)
+extern "C" int MPI_Init(int *argc, char ***argv)
 {
     int i, ret, descriptor;
     peruse_event_h eh;
@@ -94,7 +95,7 @@ int MPI_Init(int *argc, char ***argv)
     return register_event_handlers(MPI_COMM_WORLD, peruse_event_handler);
 }
 
-int MPI_Comm_create(MPI_Comm comm, MPI_Group group, MPI_Comm *newcomm)
+extern "C" int MPI_Comm_create(MPI_Comm comm, MPI_Group group, MPI_Comm *newcomm)
 {
     int ret;
 
@@ -106,7 +107,7 @@ int MPI_Comm_create(MPI_Comm comm, MPI_Group group, MPI_Comm *newcomm)
     return register_event_handlers(*newcomm, peruse_event_handler);
 }
 
-int MPI_Comm_dup(MPI_Comm comm, MPI_Comm *newcomm)
+extern "C" int MPI_Comm_dup(MPI_Comm comm, MPI_Comm *newcomm)
 {
     int ret;
 
@@ -118,7 +119,7 @@ int MPI_Comm_dup(MPI_Comm comm, MPI_Comm *newcomm)
     return register_event_handlers(*newcomm, peruse_event_handler);
 }
 
-int MPI_Comm_split(MPI_Comm comm, int color, int key, MPI_Comm *newcomm)
+extern "C" int MPI_Comm_split(MPI_Comm comm, int color, int key, MPI_Comm *newcomm)
 {
     int ret;
 
@@ -130,7 +131,7 @@ int MPI_Comm_split(MPI_Comm comm, int color, int key, MPI_Comm *newcomm)
     return register_event_handlers(*newcomm, peruse_event_handler);
 }
 
-int MPI_Comm_free(MPI_Comm *comm)
+extern "C" int MPI_Comm_free(MPI_Comm *comm)
 {
     int i, comm_idx, ret;
     MPI_Comm cm = *comm;
@@ -149,7 +150,7 @@ int MPI_Comm_free(MPI_Comm *comm)
     return remove_event_handlers(comm_idx);
 }
 
-int MPI_Finalize()
+extern "C" int MPI_Finalize()
 {
     int i;
 
@@ -170,7 +171,6 @@ int MPI_Finalize()
     return PMPI_Finalize();
 }
 
-/* Support functions */
 int register_event_handlers(MPI_Comm comm, peruse_comm_callback_f *callback)
 {
     int i;
