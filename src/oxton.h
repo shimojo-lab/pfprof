@@ -5,7 +5,7 @@
 
 #include "uthash.h"
 
-typedef struct {
+struct xfer_event {
     MPI_Aint unique_id;
     int src;
     int dst;
@@ -13,7 +13,7 @@ typedef struct {
     double end_time;
     int size;
     UT_hash_handle hh;
-} xfer_event_t;
+};
 
 extern int num_procs, my_rank;
 

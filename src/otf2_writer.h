@@ -14,7 +14,7 @@ extern uint64_t global_epoch_end;
 
 int open_otf2_writer();
 int close_otf2_writer();
-int write_xfer_event(xfer_event_t *ev);
+int write_xfer_event(struct xfer_event *ev);
 
 int write_global_defs();
 

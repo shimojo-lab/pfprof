@@ -30,13 +30,13 @@ static int remove_event_handlers(int comm_idx);
 static int num_comms = 0;
 static MPI_Comm *comms = NULL;
 static event_handle_table_t event_table[NUM_REQ_EVENT_NAMES];
-static xfer_event_t *events = NULL;
+static struct xfer_event *events = NULL;
 
 /* Callback for collecting statistics */
 int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
         peruse_comm_spec_t *spec, void *param)
 {
-    xfer_event_t tmp_ev, *ev = NULL;
+    struct xfer_event tmp_ev, *ev = NULL;
     int type, size;
 
     /* Ignore all recv events and send events to myself */
@@ -49,7 +49,7 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
         case PERUSE_COMM_REQ_XFER_BEGIN:
             MPI_Type_size(spec->datatype, &size);
 
-            ev = (xfer_event_t *)malloc(sizeof(xfer_event_t));
+            ev = (struct xfer_event *)malloc(sizeof(*ev));
             ev->unique_id = unique_id;
             ev->src = my_rank;
             ev->dst = spec->peer;
@@ -171,7 +171,7 @@ int MPI_Comm_free(MPI_Comm *comm)
 int MPI_Finalize()
 {
     int i;
-    xfer_event_t *ev, *tmp_ev;
+    struct xfer_event *ev, *tmp_ev;
 
     close_otf2_writer();
 

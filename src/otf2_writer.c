@@ -91,7 +91,7 @@ int close_otf2_writer()
     return EXIT_SUCCESS;
 }
 
-int write_xfer_event(xfer_event_t *ev)
+int write_xfer_event(struct xfer_event *ev)
 {
     printf("xfer from %d to %d in %f[s]\n", ev->src, ev->dst,
             ev->end_time - ev->start_time);
