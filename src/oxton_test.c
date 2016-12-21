@@ -20,6 +20,8 @@ int main(int argc, char** argv) {
     MPI_Comm newcomm;
     MPI_Comm_split(MPI_COMM_WORLD, world_rank % 2, world_rank / 2, &newcomm);
 
+    MPI_Bcast(buf, 500, MPI_CHAR, 0, newcomm);
+
     // Finalize the MPI environment.
     MPI_Finalize();
 }

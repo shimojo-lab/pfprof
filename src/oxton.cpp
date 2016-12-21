@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <unordered_map>
+#include <utility>
 
 #include <mpi.h>
 extern "C" {
@@ -23,6 +24,7 @@ int num_procs, my_rank;
 static int register_event_handlers(MPI_Comm comm,
         peruse_comm_callback_f *callback);
 static int remove_event_handlers(MPI_Comm comm);
+static int register_comm(MPI_Comm comm);
 
 typedef int peruse_event_desc;
 typedef std::unordered_map<MPI_Comm, peruse_event_h> hoge;
@@ -31,14 +33,15 @@ typedef std::unordered_map<peruse_event_desc, hoge> eh_table_t;
 static std::vector<MPI_Comm> comms;
 static std::unordered_map<MPI_Aint, uint64_t> req_id_table;
 static int max_req_id;
-
-eh_table_t eh_table;
+static std::unordered_map<MPI_Comm, std::vector<int> > lg_rank_table;
+static eh_table_t eh_table;
 
 int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
         peruse_comm_spec_t *spec, void *param)
 {
     int ev_type, sz, len;
     uint64_t req_id = (uint64_t)unique_id;
+    uint64_t dst;
 
     /* Ignore all recv events and send events to myself */
     if(spec->peer == my_rank || spec->operation == PERUSE_RECV) {
@@ -51,11 +54,13 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
             MPI_Type_size(spec->datatype, &sz);
             len = spec->count * sz;
             req_id_table[unique_id] = max_req_id++;
-            write_xfer_begin_event(spec->peer, spec->tag, len, max_req_id);
+            dst = lg_rank_table[spec->comm][spec->peer];
+            write_xfer_begin_event(dst, spec->tag, len, max_req_id);
             break;
 
         case PERUSE_COMM_REQ_XFER_END:
             write_xfer_end_event(req_id_table[unique_id]);
+            req_id_table.erase(unique_id);
             break;
 
         default:
@@ -79,7 +84,7 @@ extern "C" int MPI_Init(int *argc, char ***argv)
     /* Initialize PERUSE */
     ret = PERUSE_Init();
     if(ret != PERUSE_SUCCESS) {
-        printf("Unable to initialize PERUSE\n");
+        std::cout << "Unable to initialize PERUSE" << std::endl;
         return MPI_ERR_INTERN;
     }
 
@@ -89,12 +94,15 @@ extern "C" int MPI_Init(int *argc, char ***argv)
 
         ret = PERUSE_Query_event(req_events[i], &desc);
         if(ret != PERUSE_SUCCESS) {
-            printf("Event %s not supported\n", req_events[i]);
+            std::cout << "Events " << req_events[i] << " not supported" << std::endl;
             return MPI_ERR_INTERN;
         }
 
         eh_table[desc] = std::unordered_map<MPI_Comm, peruse_event_h>();
     }
+
+    register_comm(MPI_COMM_WORLD);
+    register_comm(MPI_COMM_SELF);
 
     return register_event_handlers(MPI_COMM_WORLD, peruse_event_handler);
 }
@@ -108,6 +116,8 @@ extern "C" int MPI_Comm_create(MPI_Comm comm, MPI_Group group, MPI_Comm *newcomm
         return ret;
     }
 
+    register_comm(*newcomm);
+
     return register_event_handlers(*newcomm, peruse_event_handler);
 }
 
@@ -120,6 +130,8 @@ extern "C" int MPI_Comm_dup(MPI_Comm comm, MPI_Comm *newcomm)
         return ret;
     }
 
+    register_comm(*newcomm);
+
     return register_event_handlers(*newcomm, peruse_event_handler);
 }
 
@@ -131,6 +143,8 @@ extern "C" int MPI_Comm_split(MPI_Comm comm, int color, int key, MPI_Comm *newco
     if(ret != MPI_SUCCESS) {
         return ret;
     }
+
+    register_comm(*newcomm);
 
     return register_event_handlers(*newcomm, peruse_event_handler);
 }
@@ -186,4 +200,29 @@ int remove_event_handlers(MPI_Comm comm)
     }
 
     return MPI_SUCCESS;
+}
+
+int register_comm(MPI_Comm comm)
+{
+    int sz, *ranks, *world_ranks;
+    MPI_Group group;
+    MPI_Group world_group;
+
+    MPI_Comm_group(comm, &group);
+    MPI_Comm_group(MPI_COMM_WORLD, &world_group);
+    MPI_Comm_size(comm, &sz);
+
+    ranks = (int *)calloc(sz, sizeof(*ranks));
+    world_ranks = (int *)calloc(sz, sizeof(*world_ranks));
+    for (int i = 0; i < sz; i++) {
+        ranks[i] = i;
+    }
+
+    MPI_Group_translate_ranks(group, sz, ranks, world_group, world_ranks);
+
+    for (int i = 0; i < sz; i++) {
+        lg_rank_table[comm].push_back(world_ranks[i]);
+    }
+
+    return EXIT_SUCCESS;
 }
