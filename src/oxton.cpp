@@ -44,7 +44,8 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
     uint64_t dst;
 
     /* Ignore all recv events and send events to myself */
-    if(spec->peer == my_rank || spec->operation == PERUSE_RECV) {
+    dst = lg_rank_table[spec->comm][spec->peer];
+    if(dst == my_rank || spec->operation != PERUSE_SEND) {
         return MPI_SUCCESS;
     }
 
@@ -54,7 +55,6 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
             MPI_Type_size(spec->datatype, &sz);
             len = spec->count * sz;
             req_id_table[unique_id] = max_req_id++;
-            dst = lg_rank_table[spec->comm][spec->peer];
             write_xfer_begin_event(dst, spec->tag, len, max_req_id);
             break;
 
@@ -164,12 +164,12 @@ extern "C" int MPI_Comm_free(MPI_Comm *comm)
 
 extern "C" int MPI_Finalize()
 {
-    close_otf2_writer();
-
     /* Deactivate event handles and free them for all comms */
     for(int i = 0; i < comms.size(); i++) {
         remove_event_handlers(comms[i]);
     }
+
+    close_otf2_writer();
 
     return PMPI_Finalize();
 }
