@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+
 #include <otf2/otf2.h>
 #include <otf2/OTF2_MPI_Collectives.h>
 
@@ -14,8 +16,9 @@ uint64_t global_epoch_end;
 
 static OTF2_TimeStamp get_time()
 {
-    double t = MPI_Wtime() * 1e9;
-    return (uint64_t)t;
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return (uint64_t)(ts.tv_sec * 1000000000 + ts.tv_nsec);
 }
 
 static OTF2_FlushType pre_flush(void *userData, OTF2_FileType fileType,
