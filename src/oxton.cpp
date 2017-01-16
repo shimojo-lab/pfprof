@@ -54,8 +54,9 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
         case PERUSE_COMM_REQ_XFER_BEGIN:
             MPI_Type_size(spec->datatype, &sz);
             len = spec->count * sz;
-            req_id_table[unique_id] = max_req_id++;
+            req_id_table[unique_id] = max_req_id;
             write_xfer_begin_event(dst, spec->tag, len, max_req_id);
+            max_req_id++;
             break;
 
         case PERUSE_COMM_REQ_XFER_END:
