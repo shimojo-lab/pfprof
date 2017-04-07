@@ -23,3 +23,8 @@ mpirun -x LD_PRELOAD=<path/to/liboxton.so> <path/to/app>
 ```
 
 Traces will be stored under `trace/` in OTF2 format.
+
+## Notes
+
+If you are using oxton on a multi-node cluster, you need to synchronize the
+clocks on computing nodes using ptp4l or ptpd to obtain correct event traces.
