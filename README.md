@@ -4,6 +4,7 @@ A PERUSE-based MPI tracer
 
 ## Requirements
 
+- cmake 2.8+
 - g++
 - [OTF2](http://www.vi-hps.org/projects/score-p) 1.4+
 - MPI implementation that supports PERUSE
