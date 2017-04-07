@@ -1,6 +1,6 @@
+#include <otf2/otf2.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <otf2/otf2.h>
 
 #include "otf2_writer.h"
 
@@ -23,19 +23,17 @@ static int write_location_global_defs(OTF2_GlobalDefWriter *w)
         char process_name[32];
 
         sprintf(process_name, "MPI Rank %d", rank);
-        OTF2_GlobalDefWriter_WriteString(w, G_STR_PROCESS + rank,
-                                            process_name);
+        OTF2_GlobalDefWriter_WriteString(w, G_STR_PROCESS + rank, process_name);
 
         /* Process */
         OTF2_GlobalDefWriter_WriteLocationGroup(
-                w, rank /* id == rank */, G_STR_PROCESS + rank /* name */,
-                OTF2_LOCATION_GROUP_TYPE_PROCESS,
-                OTF2_UNDEFINED_SYSTEM_TREE_NODE);
+            w, rank /* id == rank */, G_STR_PROCESS + rank /* name */,
+            OTF2_LOCATION_GROUP_TYPE_PROCESS, OTF2_UNDEFINED_SYSTEM_TREE_NODE);
 
         /* Thread */
         OTF2_GlobalDefWriter_WriteLocation(
-                w, rank /* id */, 1 /* name */, OTF2_LOCATION_TYPE_CPU_THREAD,
-                100 /* number of events */, rank /* proces */);
+            w, rank /* id */, 1 /* name */, OTF2_LOCATION_TYPE_CPU_THREAD,
+            100 /* number of events */, rank /* proces */);
     }
 
     return EXIT_SUCCESS;
@@ -56,14 +54,12 @@ static int write_communicator_global_defs(OTF2_GlobalDefWriter *w)
 
     /* MPI_COMM_WORLD Group */
     OTF2_GlobalDefWriter_WriteGroup(
-            w, 1 /* id */, G_STR_EMPTY /* name */, OTF2_GROUP_TYPE_COMM_GROUP,
-            OTF2_PARADIGM_MPI, OTF2_GROUP_FLAG_NONE, num_procs,
-            comm_locations);
+        w, 1 /* id */, G_STR_EMPTY /* name */, OTF2_GROUP_TYPE_COMM_GROUP,
+        OTF2_PARADIGM_MPI, OTF2_GROUP_FLAG_NONE, num_procs, comm_locations);
 
     /* MPI_COMM_WORLD */
-    OTF2_GlobalDefWriter_WriteComm(
-            w, 0 /* id */, G_STR_COMM_WORLD /* name */, 1 /* group */,
-            OTF2_UNDEFINED_COMM);
+    OTF2_GlobalDefWriter_WriteComm(w, 0 /* id */, G_STR_COMM_WORLD /* name */,
+                                   1 /* group */, OTF2_UNDEFINED_COMM);
 
     free(comm_locations);
 
@@ -78,7 +74,7 @@ int write_global_defs()
 
     uint64_t global_epoch_len = global_epoch_end - global_epoch_start + 1;
     OTF2_GlobalDefWriter_WriteClockProperties(
-            writer, 1000000000, global_epoch_start, global_epoch_len);
+        writer, 1000000000, global_epoch_start, global_epoch_len);
 
     write_location_global_defs(writer);
     write_communicator_global_defs(writer);
@@ -87,4 +83,3 @@ int write_global_defs()
 
     return EXIT_SUCCESS;
 }
-
