@@ -230,6 +230,8 @@ int register_comm(MPI_Comm comm)
     return EXIT_SUCCESS;
 }
 
+/* Wrapper functions for FORTRAN */
+
 extern "C" void mpi_finalize_(MPI_Fint *ierr)
 {
     int c_ierr = MPI_Finalize();

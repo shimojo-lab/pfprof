@@ -45,7 +45,7 @@ static OTF2_DefWriter *def_writer;
 
 int open_otf2_writer()
 {
-    archive = OTF2_Archive_Open("trace", "oxton-test", OTF2_FILEMODE_WRITE,
+    archive = OTF2_Archive_Open("trace", "oxton", OTF2_FILEMODE_WRITE,
                                 1024 * 1024 /* event chunk size */,
                                 4 * 1024 * 1024 /* def chunk size */,
                                 OTF2_SUBSTRATE_POSIX, OTF2_COMPRESSION_NONE);
