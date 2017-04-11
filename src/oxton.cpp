@@ -40,13 +40,7 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
 {
     int ev_type, sz, len;
     uint64_t req_id = (uint64_t)unique_id;
-    uint64_t dst;
-
-    /* Ignore all recv events and send events to myself */
-    dst = lg_rank_table[spec->comm][spec->peer];
-    if (dst == my_rank || spec->operation != PERUSE_SEND) {
-        return MPI_SUCCESS;
-    }
+    uint64_t peer = lg_rank_table[spec->comm][spec->peer];
 
     PERUSE_Event_get(event_handle, &ev_type);
     switch (ev_type) {
@@ -54,12 +48,29 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
         MPI_Type_size(spec->datatype, &sz);
         len = spec->count * sz;
         req_id_table[unique_id] = max_req_id;
-        write_xfer_begin_event(dst, spec->tag, len, max_req_id);
+        if (spec->operation == PERUSE_SEND) {
+            write_begin_send_event(peer, spec->tag, len, max_req_id);
+        } else if (spec->operation == PERUSE_RECV) {
+            write_begin_recv_event(max_req_id);
+        } else {
+            std::cout << "Unexpected operation type\n" << std::endl;
+            return MPI_ERR_INTERN;
+        }
         max_req_id++;
         break;
 
     case PERUSE_COMM_REQ_XFER_END:
-        write_xfer_end_event(req_id_table[unique_id]);
+        if (spec->operation == PERUSE_SEND) {
+            write_end_send_event(req_id_table[unique_id]);
+        } else if (spec->operation == PERUSE_RECV) {
+        MPI_Type_size(spec->datatype, &sz);
+        len = spec->count * sz;
+            write_end_recv_event(spec->peer, spec->tag, len,
+                                 req_id_table[unique_id]);
+        } else {
+            std::cout << "Unexpected operation type\n" << std::endl;
+            return MPI_ERR_INTERN;
+        }
         req_id_table.erase(unique_id);
         break;
 

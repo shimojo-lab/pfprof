@@ -94,7 +94,7 @@ int close_otf2_writer()
     return EXIT_SUCCESS;
 }
 
-int write_xfer_begin_event(uint32_t dst, uint32_t tag, uint32_t len,
+int write_begin_send_event(uint32_t dst, uint32_t tag, uint32_t len,
                            uint64_t req_id)
 {
     OTF2_EvtWriter_MpiIsend(evt_writer, NULL, get_time(), dst, 0, tag, len,
@@ -103,9 +103,25 @@ int write_xfer_begin_event(uint32_t dst, uint32_t tag, uint32_t len,
     return EXIT_SUCCESS;
 }
 
-int write_xfer_end_event(uint64_t req_id)
+int write_end_send_event(uint64_t req_id)
 {
     OTF2_EvtWriter_MpiIsendComplete(evt_writer, NULL, get_time(), req_id);
+
+    return EXIT_SUCCESS;
+}
+
+int write_begin_recv_event(uint64_t req_id)
+{
+    OTF2_EvtWriter_MpiIrecvRequest(evt_writer, NULL, get_time(), req_id);
+
+    return EXIT_SUCCESS;
+}
+
+int write_end_recv_event(uint32_t src, uint32_t tag, uint32_t len,
+                         uint64_t req_id)
+{
+    OTF2_EvtWriter_MpiIrecv(evt_writer, NULL, get_time(), src, 0, tag, len,
+                            req_id);
 
     return EXIT_SUCCESS;
 }
