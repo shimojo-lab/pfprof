@@ -1,5 +1,5 @@
 # liboxton
-add_library(oxton SHARED oxton.cpp)
+add_library(oxton SHARED oxton.cc)
 target_link_libraries(oxton ${MPI_C_LIBRARIES})
 
 # oxton-test
