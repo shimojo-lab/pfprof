@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <unordered_map>
 #include <vector>
 
 #include "json.hpp"
@@ -31,10 +32,14 @@ public:
 
         switch (type) {
         case EV_BEGIN_SEND:
-            sent_traffic_[peer] += len;
+            tx_bytes_[peer] += len;
+            tx_messages_[peer]++;
+            tx_message_sizes_[len]++;
             break;
         case EV_BEGIN_RECV:
-            received_traffic_[peer] += len;
+            rx_bytes_[peer] += len;
+            rx_messages_[peer]++;
+            rx_message_sizes_[len]++;
             break;
         default:
             break;
@@ -59,20 +64,43 @@ public:
     void set_n_procs(int n_procs)
     {
         n_procs_ = n_procs;
-        sent_traffic_.resize(n_procs);
-        received_traffic_.resize(n_procs);
+        tx_bytes_.resize(n_procs);
+        rx_bytes_.resize(n_procs);
+        tx_messages_.resize(n_procs);
+        rx_messages_.resize(n_procs);
     }
 
     void write_result(const std::string& path)
     {
         nlohmann::json j;
+
+        // Meta data
         j["processor_name"] = processor_name_;
         j["rank"] = rank_;
         j["n_procs"] = n_procs_;
         j["description"] = description_;
         j["n_events"] = n_events_;
-        j["sent_traffic"] = sent_traffic_;
-        j["received_traffic"] = received_traffic_;
+
+        j["tx_bytes"] = tx_bytes_;
+        j["rx_bytes"] = rx_bytes_;
+        j["tx_messages"] = tx_messages_;
+        j["rx_messages"] = rx_messages_;
+
+        j["tx_message_sizes"] = nlohmann::json::array();
+        for (const auto& kv : tx_message_sizes_) {
+            j["tx_message_sizes"].push_back({
+                {"message_size", kv.first},
+                {"frequency", kv.second},
+            });
+        }
+
+        j["rx_message_sizes"] = nlohmann::json::array();
+        for (const auto& kv : rx_message_sizes_) {
+            j["rx_message_sizes"].push_back({
+                {"message_size", kv.first},
+                {"frequency", kv.second},
+            });
+        }
 
         std::ofstream ofs(path);
         ofs << std::setw(4) << j << std::endl;
@@ -85,8 +113,12 @@ private:
 
     int n_events_;
 
-    std::vector<uint64_t> sent_traffic_;
-    std::vector<uint64_t> received_traffic_;
+    std::vector<uint64_t> tx_bytes_;
+    std::vector<uint64_t> rx_bytes_;
+    std::vector<uint64_t> tx_messages_;
+    std::vector<uint64_t> rx_messages_;
+    std::unordered_map<int, uint64_t> tx_message_sizes_;
+    std::unordered_map<int, uint64_t> rx_message_sizes_;
 };
 
 }
