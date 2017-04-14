@@ -4,10 +4,9 @@ A PERUSE-based MPI tracer
 
 ## Requirements
 
-- cmake 2.8+
+- cmake 3.1+
 - g++
-- [OTF2](http://www.vi-hps.org/projects/score-p) 1.4+
-- MPI implementation that supports PERUSE
+- Open MPI 2.0.1+ built with PERUSE
 
 ## How to build
 
@@ -21,10 +20,3 @@ $ make
 ```
 mpirun -x LD_PRELOAD=<path/to/liboxton.so> <path/to/app>
 ```
-
-Traces will be stored under `trace/` in OTF2 format.
-
-## Notes
-
-If you are using oxton on a multi-node cluster, you need to synchronize the
-clocks on computing nodes using ptp4l or ptpd to obtain correct event traces.
