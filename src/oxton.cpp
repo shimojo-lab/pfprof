@@ -8,7 +8,6 @@ extern "C" {
 #include <peruse.h>
 };
 
-#include "otf2_writer.h"
 #include "oxton.h"
 
 #define NUM_REQ_EVENT_NAMES (2)

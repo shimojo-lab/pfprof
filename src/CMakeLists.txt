@@ -1,5 +1,5 @@
 # liboxton
-add_library(oxton oxton.cpp otf2_writer.cpp otf2_gdef_writer.cpp)
+add_library(oxton oxton.cpp)
 target_link_libraries(oxton otf2 ${MPI_C_LIBRARIES})
 
 # oxton-test
