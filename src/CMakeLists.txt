@@ -1,6 +1,6 @@
 # liboxton
 add_library(oxton oxton.cpp)
-target_link_libraries(oxton otf2 ${MPI_C_LIBRARIES})
+target_link_libraries(oxton ${MPI_C_LIBRARIES})
 
 # oxton-test
 add_executable (oxton-test oxton_test.c)

@@ -12,65 +12,69 @@ extern "C" {
 
 #define NUM_REQ_EVENT_NAMES (2)
 
-/* Events for the occurrence of which the profiler will be notified */
+// Events for the occurrence of which the profiler will be notified
 static const char *req_events[NUM_REQ_EVENT_NAMES] = {
     "PERUSE_COMM_REQ_XFER_BEGIN", "PERUSE_COMM_REQ_XFER_END",
 };
 
 int num_procs, my_rank;
 
+// Register event handlers for a communicator
 static int register_event_handlers(MPI_Comm comm,
                                    peruse_comm_callback_f *callback);
+// Remove a communicator from table
 static int remove_event_handlers(MPI_Comm comm);
+// Register a communicator to table
 static int register_comm(MPI_Comm comm);
 
-typedef int peruse_event_desc;
-typedef std::unordered_map<MPI_Comm, peruse_event_h> hoge;
-typedef std::unordered_map<peruse_event_desc, hoge> eh_table_t;
+// PERUSE event descriptor
+typedef int event_desc_t;
+// Mapping from communicators to PERUSE event handlers
+typedef std::unordered_map<MPI_Comm, peruse_event_h> eh_table_t;
+// Mapping from PERUSE event descriptors to event handler tables
+typedef std::unordered_map<event_desc_t, eh_table_t> ev_table_t;
 
+// List of communicators
 static std::vector<MPI_Comm> comms;
-static std::unordered_map<MPI_Aint, uint64_t> req_id_table;
-static int max_req_id;
+// Mapping from communicator to local-global rank table
 static std::unordered_map<MPI_Comm, std::vector<int>> lg_rank_table;
-static eh_table_t eh_table;
+static ev_table_t ev_table;
 
 int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
                          peruse_comm_spec_t *spec, void *param)
 {
     int ev_type, sz, len;
-    uint64_t req_id = (uint64_t)unique_id;
     uint64_t peer = lg_rank_table[spec->comm][spec->peer];
 
+    MPI_Type_size(spec->datatype, &sz);
+    len = spec->count * sz;
+
     PERUSE_Event_get(event_handle, &ev_type);
+
     switch (ev_type) {
     case PERUSE_COMM_REQ_XFER_BEGIN:
-        MPI_Type_size(spec->datatype, &sz);
-        len = spec->count * sz;
-        req_id_table[unique_id] = max_req_id;
         if (spec->operation == PERUSE_SEND) {
-            write_begin_send_event(peer, spec->tag, len, max_req_id);
+            std::cout << "Send start: " << my_rank << " ->  " << peer << std::endl;
         } else if (spec->operation == PERUSE_RECV) {
-            write_begin_recv_event(max_req_id);
+            std::cout << "Receive start: " << peer << " ->  " << my_rank << std::endl;
         } else {
             std::cout << "Unexpected operation type\n" << std::endl;
             return MPI_ERR_INTERN;
         }
-        max_req_id++;
         break;
 
     case PERUSE_COMM_REQ_XFER_END:
-        if (spec->operation == PERUSE_SEND) {
-            write_end_send_event(req_id_table[unique_id]);
-        } else if (spec->operation == PERUSE_RECV) {
         MPI_Type_size(spec->datatype, &sz);
         len = spec->count * sz;
-            write_end_recv_event(spec->peer, spec->tag, len,
-                                 req_id_table[unique_id]);
+
+        if (spec->operation == PERUSE_SEND) {
+            std::cout << "Send end: " << my_rank << " ->  " << peer << std::endl;
+        } else if (spec->operation == PERUSE_RECV) {
+            std::cout << "Receive end: " << peer << " ->  " << my_rank << std::endl;
         } else {
             std::cout << "Unexpected operation type\n" << std::endl;
             return MPI_ERR_INTERN;
         }
-        req_id_table.erase(unique_id);
         break;
 
     default:
@@ -89,27 +93,25 @@ extern "C" int MPI_Init(int *argc, char ***argv)
     PMPI_Comm_size(MPI_COMM_WORLD, &num_procs);
     PMPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
-    open_otf2_writer();
-
-    /* Initialize PERUSE */
+    // Initialize PERUSE
     ret = PERUSE_Init();
     if (ret != PERUSE_SUCCESS) {
         std::cout << "Unable to initialize PERUSE" << std::endl;
         return MPI_ERR_INTERN;
     }
 
-    /* Query PERUSE to see if the events of interest are supported */
-    for (int i = 0; i < NUM_REQ_EVENT_NAMES; i++) {
-        peruse_event_desc desc;
+    // Query PERUSE to see if the events of interest are supported
+    for (const auto& req_event : req_events) {
+        event_desc_t desc;
 
-        ret = PERUSE_Query_event(req_events[i], &desc);
+        ret = PERUSE_Query_event(req_event, &desc);
         if (ret != PERUSE_SUCCESS) {
-            std::cout << "Events " << req_events[i] << " not supported"
+            std::cout << "Events " << req_events << " not supported"
                       << std::endl;
             return MPI_ERR_INTERN;
         }
 
-        eh_table[desc] = std::unordered_map<MPI_Comm, peruse_event_h>();
+        ev_table[desc] = std::unordered_map<MPI_Comm, peruse_event_h>();
     }
 
     register_comm(MPI_COMM_WORLD);
@@ -177,27 +179,22 @@ extern "C" int MPI_Comm_free(MPI_Comm *comm)
 
 extern "C" int MPI_Finalize()
 {
-    /* Deactivate event handles and free them for all comms */
-    for (int i = 0; i < comms.size(); i++) {
-        remove_event_handlers(comms[i]);
+    for (const auto& comm : comms) {
+        remove_event_handlers(comm);
     }
-
-    close_otf2_writer();
 
     return PMPI_Finalize();
 }
 
 int register_event_handlers(MPI_Comm comm, peruse_comm_callback_f *callback)
 {
-    /* Initialize event handles with comm and activate them */
     comms.push_back(comm);
 
-    eh_table_t::iterator it;
-    for (it = eh_table.begin(); it != eh_table.end(); ++it) {
+    for (auto& kv : ev_table) {
         peruse_event_h eh;
 
-        PERUSE_Event_comm_register(it->first, comm, callback, NULL, &eh);
-        it->second[comm] = eh;
+        PERUSE_Event_comm_register(kv.first, comm, callback, NULL, &eh);
+        kv.second[comm] = eh;
         PERUSE_Event_activate(eh);
     }
 
@@ -206,10 +203,9 @@ int register_event_handlers(MPI_Comm comm, peruse_comm_callback_f *callback)
 
 int remove_event_handlers(MPI_Comm comm)
 {
-    eh_table_t::iterator it;
-    for (it = eh_table.begin(); it != eh_table.end(); ++it) {
-        PERUSE_Event_deactivate(it->second[comm]);
-        PERUSE_Event_release(&it->second[comm]);
+    for (auto& kv : ev_table) {
+        PERUSE_Event_deactivate(kv.second[comm]);
+        PERUSE_Event_release(&kv.second[comm]);
     }
 
     return MPI_SUCCESS;
@@ -240,7 +236,7 @@ int register_comm(MPI_Comm comm)
     return EXIT_SUCCESS;
 }
 
-/* Wrapper functions for FORTRAN */
+// Wrapper functions for FORTRAN
 
 extern "C" void mpi_finalize_(MPI_Fint *ierr)
 {
