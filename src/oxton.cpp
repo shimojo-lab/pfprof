@@ -8,16 +8,12 @@ extern "C" {
 #include <peruse.h>
 };
 
-#include "oxton.h"
-
 #define NUM_REQ_EVENT_NAMES (2)
 
 // Events for the occurrence of which the profiler will be notified
 static const char *req_events[NUM_REQ_EVENT_NAMES] = {
     "PERUSE_COMM_REQ_XFER_BEGIN", "PERUSE_COMM_REQ_XFER_END",
 };
-
-int num_procs, my_rank;
 
 // Register event handlers for a communicator
 static int register_event_handlers(MPI_Comm comm,
@@ -54,9 +50,7 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
     switch (ev_type) {
     case PERUSE_COMM_REQ_XFER_BEGIN:
         if (spec->operation == PERUSE_SEND) {
-            std::cout << "Send start: " << my_rank << " ->  " << peer << std::endl;
         } else if (spec->operation == PERUSE_RECV) {
-            std::cout << "Receive start: " << peer << " ->  " << my_rank << std::endl;
         } else {
             std::cout << "Unexpected operation type\n" << std::endl;
             return MPI_ERR_INTERN;
@@ -68,9 +62,7 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
         len = spec->count * sz;
 
         if (spec->operation == PERUSE_SEND) {
-            std::cout << "Send end: " << my_rank << " ->  " << peer << std::endl;
         } else if (spec->operation == PERUSE_RECV) {
-            std::cout << "Receive end: " << peer << " ->  " << my_rank << std::endl;
         } else {
             std::cout << "Unexpected operation type\n" << std::endl;
             return MPI_ERR_INTERN;
@@ -88,6 +80,7 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
 extern "C" int MPI_Init(int *argc, char ***argv)
 {
     int ret;
+    int num_procs, my_rank;
 
     PMPI_Init(argc, argv);
     PMPI_Comm_size(MPI_COMM_WORLD, &num_procs);
