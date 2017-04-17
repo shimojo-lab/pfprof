@@ -40,7 +40,7 @@ static std::vector<MPI_Comm> comms;
 static std::unordered_map<MPI_Comm, std::vector<int>> lg_rank_table;
 static ev_table_t ev_table;
 
-trace_analyzer analyzer;
+static trace_analyzer analyzer;
 
 int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
                          peruse_comm_spec_t *spec, void *param)
@@ -134,16 +134,8 @@ int register_comm(MPI_Comm comm)
     return EXIT_SUCCESS;
 }
 
-}
-
-// MPI functions
-
-extern "C" int MPI_Init(int *argc, char ***argv)
+static int initialize()
 {
-    int ret;
-
-    PMPI_Init(argc, argv);
-
     char processor_name[MPI_MAX_PROCESSOR_NAME];
     int processor_name_len;
     PMPI_Get_processor_name(processor_name, &processor_name_len);
@@ -158,7 +150,7 @@ extern "C" int MPI_Init(int *argc, char ***argv)
     oxton::analyzer.set_n_procs(n_procs);
 
     // Initialize PERUSE
-    ret = PERUSE_Init();
+    int ret = PERUSE_Init();
     if (ret != PERUSE_SUCCESS) {
         std::cout << "Unable to initialize PERUSE" << std::endl;
         return MPI_ERR_INTERN;
@@ -183,6 +175,31 @@ extern "C" int MPI_Init(int *argc, char ***argv)
 
     return oxton::register_event_handlers(MPI_COMM_WORLD,
                                           oxton::peruse_event_handler);
+}
+
+}
+
+// MPI functions
+
+extern "C" int MPI_Init(int *argc, char ***argv)
+{
+    int ret = PMPI_Init(argc, argv);
+    if (ret != MPI_SUCCESS) {
+        return ret;
+    }
+
+    return oxton::initialize();
+}
+
+extern "C" int MPI_Init_thread(int *argc, char ***argv, int required,
+                               int *provided)
+{
+    int ret = PMPI_Init_thread(argc, argv, required, provided);
+    if (ret != MPI_SUCCESS) {
+        return ret;
+    }
+
+    return oxton::initialize();
 }
 
 extern "C" int MPI_Comm_create(MPI_Comm comm, MPI_Group group,
