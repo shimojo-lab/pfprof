@@ -1,5 +1,6 @@
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -35,7 +36,7 @@ typedef std::unordered_map<MPI_Comm, peruse_event_h> eh_table_t;
 typedef std::unordered_map<event_desc_t, eh_table_t> ev_table_t;
 
 // List of communicators
-static std::vector<MPI_Comm> comms;
+static std::unordered_set<MPI_Comm> comms;
 // Mapping from communicator to local-global rank table
 static std::unordered_map<MPI_Comm, std::vector<int>> lg_rank_table;
 static ev_table_t ev_table;
@@ -86,7 +87,7 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
 
 int register_event_handlers(MPI_Comm comm, peruse_comm_callback_f *callback)
 {
-    comms.push_back(comm);
+    comms.insert(comm);
 
     for (auto& kv : ev_table) {
         peruse_event_h eh;
@@ -132,6 +133,17 @@ int register_comm(MPI_Comm comm)
     }
 
     return EXIT_SUCCESS;
+}
+
+int unregister_comm(MPI_Comm comm)
+{
+    oxton::comms.erase(comm);
+
+    lg_rank_table.erase(comm);
+
+    for (auto& kv : oxton::ev_table) {
+        kv.second.erase(comm);
+    }
 }
 
 static int initialize()
@@ -251,6 +263,8 @@ extern "C" int MPI_Comm_free(MPI_Comm *comm)
     if (ret != MPI_SUCCESS) {
         return ret;
     }
+
+    oxton::unregister_comm(*comm);
 
     return oxton::remove_event_handlers(*comm);
 }
