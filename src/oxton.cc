@@ -189,7 +189,7 @@ extern "C" int MPI_Comm_create(MPI_Comm comm, MPI_Group group,
                                MPI_Comm *newcomm)
 {
     int ret = PMPI_Comm_create(comm, group, newcomm);
-    if (ret != MPI_SUCCESS) {
+    if (ret != MPI_SUCCESS || *newcomm == MPI_COMM_NULL) {
         return ret;
     }
 
@@ -202,7 +202,7 @@ extern "C" int MPI_Comm_create(MPI_Comm comm, MPI_Group group,
 extern "C" int MPI_Comm_dup(MPI_Comm comm, MPI_Comm *newcomm)
 {
     int ret = PMPI_Comm_dup(comm, newcomm);
-    if (ret != MPI_SUCCESS) {
+    if (ret != MPI_SUCCESS || *newcomm == MPI_COMM_NULL) {
         return ret;
     }
 
@@ -216,7 +216,7 @@ extern "C" int MPI_Comm_split(MPI_Comm comm, int color, int key,
                               MPI_Comm *newcomm)
 {
     int ret = PMPI_Comm_split(comm, color, key, newcomm);
-    if (ret != MPI_SUCCESS) {
+    if (ret != MPI_SUCCESS || *newcomm == MPI_COMM_NULL) {
         return ret;
     }
 
