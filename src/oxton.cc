@@ -289,7 +289,7 @@ extern "C" void mpi_init_(MPI_Fint *ierr)
     if (NULL != ierr) *ierr = c_ierr;
 }
 
-extern "C" void mpi_comm_create_f(MPI_Fint *comm, MPI_Fint *group,
+extern "C" void mpi_comm_create_(MPI_Fint *comm, MPI_Fint *group,
                                   MPI_Fint *newcomm, MPI_Fint *ierr)
 {
     MPI_Comm c_newcomm;
