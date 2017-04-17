@@ -111,16 +111,15 @@ int remove_event_handlers(MPI_Comm comm)
 
 int register_comm(MPI_Comm comm)
 {
-    int sz, *ranks, *world_ranks;
-    MPI_Group group;
-    MPI_Group world_group;
+    int sz;
+    MPI_Group group, world_group;
 
     PMPI_Comm_group(comm, &group);
     PMPI_Comm_group(MPI_COMM_WORLD, &world_group);
     PMPI_Comm_size(comm, &sz);
 
-    ranks = (int *)calloc(sz, sizeof(*ranks));
-    world_ranks = (int *)calloc(sz, sizeof(*world_ranks));
+    std::vector<int> ranks(sz), world_ranks(sz);
+
     for (int i = 0; i < sz; i++) {
         ranks[i] = i;
     }
@@ -131,9 +130,6 @@ int register_comm(MPI_Comm comm)
     for (int i = 0; i < sz; i++) {
         lg_rank_table[comm].push_back(world_ranks[i]);
     }
-
-    free(ranks);
-    free(world_ranks);
 
     return EXIT_SUCCESS;
 }
