@@ -46,7 +46,7 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
                          peruse_comm_spec_t *spec, void *param)
 {
     int ev_type, sz;
-    MPI_Type_size(spec->datatype, &sz);
+    PMPI_Type_size(spec->datatype, &sz);
     int  len = spec->count * sz;
 
     int peer = lg_rank_table[spec->comm][spec->peer];
@@ -115,9 +115,9 @@ int register_comm(MPI_Comm comm)
     MPI_Group group;
     MPI_Group world_group;
 
-    MPI_Comm_group(comm, &group);
-    MPI_Comm_group(MPI_COMM_WORLD, &world_group);
-    MPI_Comm_size(comm, &sz);
+    PMPI_Comm_group(comm, &group);
+    PMPI_Comm_group(MPI_COMM_WORLD, &world_group);
+    PMPI_Comm_size(comm, &sz);
 
     ranks = (int *)calloc(sz, sizeof(*ranks));
     world_ranks = (int *)calloc(sz, sizeof(*world_ranks));
@@ -125,7 +125,8 @@ int register_comm(MPI_Comm comm)
         ranks[i] = i;
     }
 
-    MPI_Group_translate_ranks(group, sz, ranks, world_group, world_ranks);
+    PMPI_Group_translate_ranks(group, sz, ranks.data(), world_group,
+                               world_ranks.data());
 
     for (int i = 0; i < sz; i++) {
         lg_rank_table[comm].push_back(world_ranks[i]);
