@@ -17,7 +17,7 @@ namespace oxton {
 
 // Events for the occurrence of which the profiler will be notified
 static const char *req_events[NUM_REQ_EVENT_NAMES] = {
-    "PERUSE_COMM_REQ_XFER_BEGIN", "PERUSE_COMM_REQ_XFER_END",
+    "PERUSE_COMM_REQ_ACTIVATE", "PERUSE_COMM_REQ_COMPLETE",
 };
 
 // Register event handlers for a communicator
@@ -55,7 +55,7 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
     PERUSE_Event_get(event_handle, &ev_type);
 
     switch (ev_type) {
-    case PERUSE_COMM_REQ_XFER_BEGIN:
+    case PERUSE_COMM_REQ_ACTIVATE:
         if (spec->operation == PERUSE_SEND) {
             oxton::analyzer.feed_event(EV_BEGIN_SEND, peer, len, spec->tag);
         } else if (spec->operation == PERUSE_RECV) {
@@ -66,7 +66,7 @@ int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
         }
         break;
 
-    case PERUSE_COMM_REQ_XFER_END:
+    case PERUSE_COMM_REQ_COMPLETE:
         if (spec->operation == PERUSE_SEND) {
             oxton::analyzer.feed_event(EV_END_SEND, peer, len, spec->tag);
         } else if (spec->operation == PERUSE_RECV) {
