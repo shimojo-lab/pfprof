@@ -9,7 +9,7 @@ extern "C" {
 };
 
 
-#include "trace_analyzer.hpp"
+#include "trace.hpp"
 
 #define NUM_REQ_EVENT_NAMES (2)
 
@@ -29,7 +29,7 @@ extern std::unordered_set<MPI_Comm> comms;
 extern std::unordered_map<MPI_Comm, std::vector<int>> lg_rank_table;
 extern ev_table_t ev_table;
 
-extern trace_analyzer analyzer;
+extern trace trace;
 
 int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
                          peruse_comm_spec_t *spec, void *param);

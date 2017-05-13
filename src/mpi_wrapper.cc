@@ -90,7 +90,7 @@ extern "C" int MPI_Finalize()
     std::stringstream path;
     path << "oxton-result" << rank << ".json";
 
-    oxton::analyzer.write_result(path.str());
+    oxton::trace.write_result(path.str());
 
     return PMPI_Finalize();
 }

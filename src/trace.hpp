@@ -1,5 +1,5 @@
-#ifndef __RESULT_WRITER_HPP__
-#define __RESULT_WRITER_HPP__
+#ifndef __TRACE_HPP__
+#define __TRACE_HPP__
 
 #include <iostream>
 #include <string>
@@ -19,10 +19,10 @@ enum event_type
     EV_END_RECV
 };
 
-class trace_analyzer
+class trace
 {
 public:
-    trace_analyzer() : n_events_(0)
+    trace() : n_events_(0)
     {
     }
 
