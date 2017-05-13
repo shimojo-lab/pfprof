@@ -144,6 +144,8 @@ int unregister_comm(MPI_Comm comm)
     for (auto& kv : oxton::ev_table) {
         kv.second.erase(comm);
     }
+
+    return EXIT_SUCCESS;
 }
 
 static int initialize()
