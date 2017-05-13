@@ -80,17 +80,7 @@ extern "C" int MPI_Comm_free(MPI_Comm *comm)
 
 extern "C" int MPI_Finalize()
 {
-    for (const auto& comm : oxton::comms) {
-        oxton::remove_event_handlers(comm);
-    }
-
-    int rank;
-    PMPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    std::stringstream path;
-    path << "oxton-result" << rank << ".json";
-
-    oxton::trace.write_result(path.str());
+    oxton::finalize();
 
     return PMPI_Finalize();
 }

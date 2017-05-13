@@ -14,14 +14,23 @@ extern "C" {
 
 namespace oxton {
 
+// PERUSE event descriptor
+typedef int event_desc_t;
+// Mapping from communicators to PERUSE event handlers
+typedef std::unordered_map<MPI_Comm, peruse_event_h> eh_table_t;
+// Mapping from PERUSE event descriptors to event handler tables
+typedef std::unordered_map<event_desc_t, eh_table_t> ev_table_t;
+
 static const char *req_events[NUM_REQ_EVENT_NAMES] = {
     "PERUSE_COMM_REQ_ACTIVATE", "PERUSE_COMM_REQ_COMPLETE",
 };
 
-std::unordered_set<MPI_Comm> comms;
-std::unordered_map<MPI_Comm, std::vector<int>> lg_rank_table;
-ev_table_t ev_table;
-class trace trace;
+// List of communicators
+static std::unordered_set<MPI_Comm> comms;
+// Mapping from communicator to local-global rank table
+static std::unordered_map<MPI_Comm, std::vector<int>> lg_rank_table;
+static ev_table_t ev_table;
+static trace trace;
 
 int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
                          peruse_comm_spec_t *spec, void *param)
@@ -169,6 +178,23 @@ int initialize()
 
     return register_event_handlers(MPI_COMM_WORLD,
                                    peruse_event_handler);
+}
+
+int finalize()
+{
+    for (const auto& comm : comms) {
+        oxton::remove_event_handlers(comm);
+    }
+
+    int rank;
+    PMPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    std::stringstream path;
+    path << "oxton-result" << rank << ".json";
+
+    oxton::trace.write_result(path.str());
+
+    return EXIT_SUCCESS;
 }
 
 }
