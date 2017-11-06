@@ -9,7 +9,7 @@ extern "C" {
 #include <peruse.h>
 };
 
-#include "oxton.hpp"
+#include "pfprof.hpp"
 #include "trace.hpp"
 
 namespace oxton {

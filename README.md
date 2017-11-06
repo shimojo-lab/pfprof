@@ -1,6 +1,6 @@
-# oxton
+# pfprof
 
-A PERUSE-based MPI tracer
+A PERUSE-based MPI profiler
 
 ## Requirements
 
@@ -18,5 +18,5 @@ $ make
 ## How to use
 
 ```
-mpirun -x LD_PRELOAD=<path/to/liboxton.so> <path/to/app>
+mpirun -x LD_PRELOAD=<path/to/libpfprof.so> <path/to/app>
 ```
