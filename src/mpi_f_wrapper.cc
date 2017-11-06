@@ -1,6 +1,6 @@
 #include <mpi.h>
 
-#include "oxton.hpp"
+#include "pfprof.hpp"
 
 extern "C" void mpi_finalize_(MPI_Fint *ierr)
 {
