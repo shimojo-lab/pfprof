@@ -2,11 +2,6 @@
 find_package(MPI REQUIRED)
 include_directories(${MPI_C_INCLUDE_PATH})
 
-# cpr
-set(USE_SYSTEM_CURL ON CACHE INTERNAL "" FORCE)
-set(BUILD_CPR_TESTS OFF CACHE INTERNAL "" FORCE)
-add_subdirectory(cpr)
-include_directories(${CPR_INCLUDE_DIRS})
 # libpfprof
 set(serial "0.2.0")
 set(soserial "2")
