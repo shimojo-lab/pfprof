@@ -11,12 +11,20 @@ A PERUSE-based MPI profiler
 ## How to build
 
 ```
-$ cmake  -DBUILD_SHARED_LIBS=ON .
+$ cmake .
 $ make
 ```
 
 ## How to use
 
+Linux:
+
 ```
 mpirun -x LD_PRELOAD=<path/to/libpfprof.so> <path/to/app>
+```
+
+macOS:
+
+```
+mpirun -x DYLD_INSERT_LIBRARIES=<path/to/libpfprof.dylib> -x DYLD_FORCE_FLAT_NAMESPACE=YES <path/to/app>
 ```
