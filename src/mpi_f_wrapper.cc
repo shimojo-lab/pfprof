@@ -70,3 +70,9 @@ extern "C" void mpi_comm_free_(MPI_Fint *comm, MPI_Fint *ierr)
         *comm = PMPI_Comm_c2f(c_comm);
     }
 }
+
+extern "C" void mpi_pcontrol_f(MPI_Fint *level, MPI_Fint *ierr)
+{
+    int c_ierr = MPI_Pcontrol(*level);
+    if (NULL != ierr) *ierr = c_ierr;
+}

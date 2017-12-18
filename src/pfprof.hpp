@@ -23,6 +23,7 @@ int remove_event_handlers(MPI_Comm comm);
 int register_comm(MPI_Comm comm);
 int unregister_comm(MPI_Comm comm);
 int initialize();
+int set_phase(int idx);
 int finalize();
 
 }

@@ -66,8 +66,6 @@ extern "C" int MPI_Comm_split(MPI_Comm comm, int color, int key,
 
 extern "C" int MPI_Comm_free(MPI_Comm *comm)
 {
-    MPI_Comm cm = *comm;
-
     int ret = PMPI_Comm_free(comm);
     if (ret != MPI_SUCCESS) {
         return ret;
@@ -76,6 +74,13 @@ extern "C" int MPI_Comm_free(MPI_Comm *comm)
     oxton::unregister_comm(*comm);
 
     return oxton::remove_event_handlers(*comm);
+}
+
+extern "C" int MPI_Pcontrol(const int level, ...)
+{
+    oxton::set_phase(level);
+
+    return MPI_SUCCESS;
 }
 
 extern "C" int MPI_Finalize()
