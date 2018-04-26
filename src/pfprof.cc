@@ -4,6 +4,8 @@
 #include <utility>
 #include <vector>
 
+#include <time.h>
+
 extern "C" {
 #include <mpi.h>
 #include <peruse.h>
@@ -31,6 +33,8 @@ static std::unordered_set<MPI_Comm> comms;
 static std::unordered_map<MPI_Comm, std::vector<int>> lg_rank_table;
 static ev_table_t ev_table;
 static trace trace;
+
+static struct timespec start_time, end_time;
 
 int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
                          peruse_comm_spec_t *spec, void *param)
@@ -176,6 +180,8 @@ int initialize()
     register_comm(MPI_COMM_WORLD);
     register_comm(MPI_COMM_SELF);
 
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
+
     return register_event_handlers(MPI_COMM_WORLD,
                                    peruse_event_handler);
 }
@@ -185,6 +191,12 @@ int finalize()
     for (const auto& comm : comms) {
         pfprof::remove_event_handlers(comm);
     }
+
+    clock_gettime(CLOCK_MONOTONIC, &end_time);
+
+    double duration = (end_time.tv_sec - start_time.tv_sec) +
+        (end_time.tv_nsec - start_time.tv_nsec) / 1000000000.0;
+    pfprof::trace.set_duration(duration);
 
     int rank;
     PMPI_Comm_rank(MPI_COMM_WORLD, &rank);

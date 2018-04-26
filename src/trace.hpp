@@ -22,7 +22,7 @@ enum event_type
 class trace
 {
 public:
-    trace() : n_events_(0)
+    trace() : duration_(0.0), n_events_(0)
     {
     }
 
@@ -70,6 +70,11 @@ public:
         rx_messages_.resize(n_procs);
     }
 
+    void set_duration(double duration)
+    {
+        duration_ = duration;
+    }
+
     void write_result(const std::string& path)
     {
         nlohmann::json j;
@@ -80,6 +85,7 @@ public:
         j["n_procs"] = n_procs_;
         j["description"] = description_;
         j["n_events"] = n_events_;
+        j["duration"] = duration_;
 
         j["tx_bytes"] = tx_bytes_;
         j["rx_bytes"] = rx_bytes_;
@@ -110,7 +116,7 @@ private:
     int rank_;
     int n_procs_;
     std::string description_;
-
+    double duration_;
     int n_events_;
 
     std::vector<uint64_t> tx_bytes_;
