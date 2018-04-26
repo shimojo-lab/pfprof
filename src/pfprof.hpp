@@ -14,7 +14,7 @@ extern "C" {
 #define NUM_REQ_EVENT_NAMES (2)
 
 
-namespace oxton {
+namespace pfprof {
 
 int peruse_event_handler(peruse_event_h event_handle, MPI_Aint unique_id,
                          peruse_comm_spec_t *spec, void *param);

@@ -9,7 +9,7 @@ extern "C" int MPI_Init(int *argc, char ***argv)
         return ret;
     }
 
-    return oxton::initialize();
+    return pfprof::initialize();
 }
 
 extern "C" int MPI_Init_thread(int *argc, char ***argv, int required,
@@ -20,7 +20,7 @@ extern "C" int MPI_Init_thread(int *argc, char ***argv, int required,
         return ret;
     }
 
-    return oxton::initialize();
+    return pfprof::initialize();
 }
 
 extern "C" int MPI_Comm_create(MPI_Comm comm, MPI_Group group,
@@ -31,10 +31,10 @@ extern "C" int MPI_Comm_create(MPI_Comm comm, MPI_Group group,
         return ret;
     }
 
-    oxton::register_comm(*newcomm);
+    pfprof::register_comm(*newcomm);
 
-    return oxton::register_event_handlers(*newcomm,
-                                          oxton::peruse_event_handler);
+    return pfprof::register_event_handlers(*newcomm,
+                                          pfprof::peruse_event_handler);
 }
 
 extern "C" int MPI_Comm_dup(MPI_Comm comm, MPI_Comm *newcomm)
@@ -44,10 +44,10 @@ extern "C" int MPI_Comm_dup(MPI_Comm comm, MPI_Comm *newcomm)
         return ret;
     }
 
-    oxton::register_comm(*newcomm);
+    pfprof::register_comm(*newcomm);
 
-    return oxton::register_event_handlers(*newcomm,
-                                          oxton::peruse_event_handler);
+    return pfprof::register_event_handlers(*newcomm,
+                                          pfprof::peruse_event_handler);
 }
 
 extern "C" int MPI_Comm_split(MPI_Comm comm, int color, int key,
@@ -58,10 +58,10 @@ extern "C" int MPI_Comm_split(MPI_Comm comm, int color, int key,
         return ret;
     }
 
-    oxton::register_comm(*newcomm);
+    pfprof::register_comm(*newcomm);
 
-    return oxton::register_event_handlers(*newcomm,
-                                          oxton::peruse_event_handler);
+    return pfprof::register_event_handlers(*newcomm,
+                                          pfprof::peruse_event_handler);
 }
 
 extern "C" int MPI_Comm_free(MPI_Comm *comm)
@@ -73,14 +73,14 @@ extern "C" int MPI_Comm_free(MPI_Comm *comm)
         return ret;
     }
 
-    oxton::unregister_comm(*comm);
+    pfprof::unregister_comm(*comm);
 
-    return oxton::remove_event_handlers(*comm);
+    return pfprof::remove_event_handlers(*comm);
 }
 
 extern "C" int MPI_Finalize()
 {
-    oxton::finalize();
+    pfprof::finalize();
 
     return PMPI_Finalize();
 }

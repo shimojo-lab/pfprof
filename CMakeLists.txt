@@ -9,6 +9,6 @@ set(CMAKE_C_FLAGS_DEBUG "-g")
 set(CMAKE_BUILD_TYPE Release)
 
 # Project
-project(oxton C CXX)
+project(pfprof C CXX)
 
 add_subdirectory(src)

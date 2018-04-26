@@ -9,7 +9,7 @@
 
 #include "json.hpp"
 
-namespace oxton {
+namespace pfprof {
 
 enum event_type
 {
